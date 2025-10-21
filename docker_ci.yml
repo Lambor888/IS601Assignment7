@@ -1,0 +1,44 @@
+# 文件路径: .github/workflows/docker_ci.yml
+
+name: Docker Image CI
+
+# 定义何时触发此工作流
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# 定义将要执行的任务
+jobs:
+  build_and_test:
+    # 运行此 Job 的环境
+    runs-on: ubuntu-latest
+    
+    # 任务步骤
+    steps:
+    # 步骤 1: 检出代码 (Checkout repository)
+    # 获取仓库代码，以便工作流可以访问 Dockerfile 和源代码
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # 步骤 2: 构建 Docker 镜像 (Build the Docker image)
+    # 注意: 这里使用 'test-image' 标签进行本地构建，不推送到 Docker Hub
+    - name: Build Docker Image
+      run: docker build -t qr-code-generator-app:test .
+
+    # 步骤 3: 运行容器并进行基本测试 (Run the container for basic test)
+    # 运行容器并传递一个测试 URL，确认它能成功启动
+    - name: Run and Test Container
+      run: |
+        # 运行容器，-d 后台运行，--rm 在退出时自动移除容器
+        docker run -d --name test-qr-generator qr-code-generator-app:test
+        
+        # 暂停几秒，确保应用程序有时间运行并生成二维码
+        sleep 5
+        
+        # 检查容器日志是否有成功输出（这一步需要根据您的main.py的实际输出进行调整）
+        docker logs test-qr-generator | grep -i "success\|generated" || true
+        
+        # 停止并移除容器 (可选，因为上面使用了 --rm)
+        docker stop test-qr-generator
